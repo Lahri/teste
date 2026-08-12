@@ -243,6 +243,15 @@ falando direto com o banco deles.
   em Airtable precisou usar por falta de acesso pra alterar o schema.
 - `docker-compose.yml` — sobe um Oracle local (imagem `gvenzl/oracle-free`,
   gratuita, comunidade) + a API, só pra desenvolvimento e teste.
+- `backend/frontend/index.html` — o painel dos analistas reescrito pra
+  falar com esta API via `fetch()` (mesmo visual/fluxo do
+  `painel-analistas.html` da raiz do projeto, só troca a camada de dados:
+  Airtable/`window.claude.mcp` → HTTP direto). O FastAPI serve este
+  arquivo na mesma origem da API (`main.py`, mount no final), então não
+  tem problema de CORS. **Este é o painel do futuro backend** — o
+  `painel-analistas.html` na raiz do projeto continua sendo o que está
+  publicado e em uso pelos analistas hoje (Airtable), até o backend Oracle
+  ser validado e for a hora de migrar de verdade.
 
 **Rodando local:**
 ```
@@ -264,7 +273,7 @@ schema é criado automaticamente na primeira subida do container Oracle.
 | `POST /api/observacoes/{id}/resolver` | marca compromisso como concluído |
 | `GET /api/compromissos?analista=Larissa` | compromissos abertos do analista, já agregados |
 
-**Testado nesta sessão (duas camadas):**
+**Testado nesta sessão (três camadas):**
 1. `backend/test_api_smoke.py` — 12 checks das rotas/validação/serialização
    da API, contra um repositório mockado.
 2. `backend/test_sql_logic_sqlite.py` — 19 checks executando o **SQL real**
@@ -273,6 +282,15 @@ schema é criado automaticamente na primeira subida do container Oracle.
    `resolver_compromisso` deixava resolver o mesmo compromisso duas vezes
    porque a query só checava `is_compromisso = 'S'`, faltava
    `AND resolvido = 'N'`.
+3. `backend/test_frontend_e2e.py` — sobe o FastAPI de verdade (repositório
+   fake, ver `backend/_dev_fake_server.py`) e dirige um navegador de
+   verdade (Playwright) pelo fluxo completo do `backend/frontend/index.html`
+   via `fetch()` real: selecionar analista, editar status inline,
+   registrar observação com compromisso, resolver compromisso. Pegou e
+   corrigiu 2 bugs reais do frontend: uma tag `<script>` duplicada e um
+   comentário que continha o texto literal `</script>`, ambos fechando a
+   tag de script mais cedo pro parser do navegador e quebrando a página
+   inteira silenciosamente.
 
 **O que não deu pra testar nesta sessão:** contra o Oracle de verdade.
 Tentei subir `docker compose up` — o daemon Docker chegou a rodar, mas o
@@ -299,10 +317,17 @@ fiz o que dava pra fazer sem ele:
 
 O que ainda não dá pra confirmar sem rodar de verdade: sintaxe específica
 do Oracle no `RETURNING ... INTO` e nos tipos exatos (`CHAR(1) CHECK`).
-**Antes de considerar isso pronto**, alguém com Docker disponível
-(sua máquina, ou já direto no ambiente do NTI) precisa rodar
-`docker compose up --build` e confirmar que o `schema.sql` cria as
-tabelas certas e que os endpoints respondem contra o Oracle de verdade.
+**Antes de considerar isso pronto**, precisa validar contra um Oracle de
+verdade, por um destes caminhos:
+1. **Oracle Cloud Always Free** — criar uma conta gratuita em
+   cloud.oracle.com e provisionar um banco Autonomous Database free tier.
+   Não precisa de Docker nem de máquina própria: é só uma conexão de rede
+   (`ORACLE_DSN`/usuário/senha), então dá pra validar direto de qualquer
+   lugar com acesso à internet normal — inclusive de uma sessão como esta,
+   sem o bloqueio de download de imagem que travou o Docker aqui.
+2. Pedir ao NTI acesso a um Oracle de teste/homologação real desde já.
+3. Rodar `docker compose up --build` numa máquina com Docker (sua ou do
+   NTI).
 
 **Migração pra produção:** só troca `ORACLE_DSN`, `ORACLE_USER` e
 `ORACLE_PASSWORD` (no `.env` ou nas variáveis de ambiente do servidor)
@@ -310,11 +335,9 @@ pelas credenciais que o NTI passar — nenhum código muda. Rodar
 `schema.sql` uma vez no schema/usuário de produção antes do primeiro
 deploy.
 
-**Ainda falta:** o `painel-analistas-v3.html` atual fala com o Airtable
-via `window.claude.mcp` (conector de Artifact); pra usar este backend ele
-precisa ser reescrito pra chamar estes endpoints HTTP (`fetch`) em vez
-disso, e passa a ser servido como página normal pelo backend (ou por um
-servidor estático ao lado dele), não mais como Claude Artifact.
+**Ainda falta:** validar `backend/frontend/index.html` e o schema contra
+um Oracle de verdade (ver acima — Docker bloqueado nesta sessão) antes de
+promover ele a substituto do painel publicado hoje.
 
 ## Próximos passos
 

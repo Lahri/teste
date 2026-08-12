@@ -1,0 +1,644 @@
+<title>Fila de Demandas — Comitê SESC</title>
+<style>
+  :root{
+    --paper:#F0F2F1;
+    --surface:#FFFFFF;
+    --surface-2:#E4E8E6;
+    --ink:#182220;
+    --muted:#57645F;
+    --faint:#8B9791;
+    --line:#D4DAD7;
+    --line-strong:#B7C0BB;
+    --accent:#0F6B5C;
+    --accent-soft:#DCEEE9;
+    --good:#1E7A4C;
+    --good-soft:#DFF3E6;
+    --warn:#B5530A;
+    --warn-soft:#FCEADC;
+    --bell:#946200;
+    --bell-soft:#FBEBD2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#12160F; --surface:#191F19; --surface-2:#212822;
+      --ink:#E7ECE7; --muted:#94A399; --faint:#5C6961;
+      --line:#2B332C; --line-strong:#3B453C;
+      --accent:#4FBFA6; --accent-soft:#173029;
+      --good:#4ADE80; --good-soft:#123321;
+      --warn:#FB923C; --warn-soft:#3A2515;
+      --bell:#F0B84F; --bell-soft:#3A2E12;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#12160F; --surface:#191F19; --surface-2:#212822;
+    --ink:#E7ECE7; --muted:#94A399; --faint:#5C6961;
+    --line:#2B332C; --line-strong:#3B453C;
+    --accent:#4FBFA6; --accent-soft:#173029;
+    --good:#4ADE80; --good-soft:#123321;
+    --warn:#FB923C; --warn-soft:#3A2515;
+    --bell:#F0B84F; --bell-soft:#3A2E12;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+    font-size:14px;
+  }
+  .mono{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-variant-numeric:tabular-nums;}
+  .app{max-width:1240px;margin:0 auto;padding:24px 24px 40px;display:flex;flex-direction:column;gap:18px;min-height:100vh;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;}
+  h1{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;}
+  .subtitle{color:var(--muted);font-size:13px;margin:0;max-width:52ch;}
+
+  .picker{display:flex;align-items:center;gap:8px;}
+  .picker label{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;}
+  select#analista-select{
+    font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);
+    background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;
+    padding:8px 32px 8px 12px;cursor:pointer;
+    appearance:none;-webkit-appearance:none;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="%2357645F" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    background-repeat:no-repeat;background-position:right 12px center;
+  }
+  select#analista-select:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+
+  .banner{border-radius:8px;padding:12px 15px;font-size:13.5px;}
+  .banner.warn{background:var(--warn-soft);color:var(--warn);}
+
+  .empty-state{color:var(--faint);font-size:13.5px;font-style:italic;padding:60px 0;text-align:center;}
+
+  /* summary strip */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .summary-cell{background:var(--surface);padding:12px 16px;}
+  .summary-cell.highlight{background:var(--bell-soft);}
+  .summary-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin-bottom:5px;}
+  .summary-cell.highlight .summary-label{color:var(--bell);}
+  .summary-value{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;}
+  .summary-cell.highlight .summary-value{color:var(--bell);}
+  @media (max-width:680px){.summary{grid-template-columns:repeat(2,1fr);}}
+
+  /* compromissos */
+  .section-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--ink);margin:0 0 10px;}
+  .section-title .count{background:var(--bell);color:var(--surface);border-radius:10px;padding:1px 8px;font-size:11.5px;font-variant-numeric:tabular-nums;}
+  .compromisso-row{
+    display:flex;gap:12px;align-items:flex-start;
+    background:var(--bell-soft);border:1px solid color-mix(in srgb, var(--bell) 35%, transparent);
+    border-radius:8px;padding:11px 14px;margin-bottom:8px;
+  }
+  .compromisso-icon{font-size:15px;line-height:1.3;}
+  .compromisso-body{flex:1;min-width:0;}
+  .compromisso-item-ref{font-size:11px;color:var(--muted);margin-bottom:2px;}
+  .compromisso-item-ref .mono{color:var(--muted);}
+  .compromisso-text{font-size:13.5px;color:var(--ink);}
+  .compromisso-meta{font-size:11px;color:var(--faint);margin-top:3px;}
+  button.resolve{
+    flex-shrink:0;background:var(--surface);border:1px solid var(--line-strong);color:var(--ink);
+    border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
+    white-space:nowrap;
+  }
+  button.resolve:hover{border-color:var(--good);color:var(--good);}
+  button.resolve:disabled{opacity:.5;cursor:not-allowed;}
+
+  /* split view */
+  .split{display:grid;grid-template-columns:340px 1fr;gap:16px;flex:1;min-height:480px;}
+  @media (max-width:860px){.split{grid-template-columns:1fr;}}
+
+  .list-pane{
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    overflow-y:auto;max-height:calc(100vh - 260px);
+  }
+  .list-item{
+    display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);
+    padding:12px 14px;cursor:pointer;font-family:inherit;color:inherit;
+  }
+  .list-item:last-child{border-bottom:none;}
+  .list-item:hover{background:var(--surface-2);}
+  .list-item.active{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent);}
+  .list-item-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px;}
+  .list-item-id{font-size:11px;color:var(--faint);font-family:ui-monospace,monospace;}
+  .list-item-desc{font-size:13px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:6px;}
+  .list-item-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;}
+  .list-item-preview{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+  .list-item-preview.empty{color:var(--faint);font-style:italic;}
+
+  .pill{display:inline-block;border-radius:4px;padding:2px 7px;font-size:10.5px;font-weight:600;}
+  .pill.neutral{background:var(--surface-2);color:var(--muted);}
+  .pill.st-todo{background:var(--surface-2);color:var(--muted);}
+  .pill.st-analise{background:var(--warn-soft);color:var(--warn);}
+  .pill.st-dev{background:var(--accent-soft);color:var(--accent);}
+  .pill.st-done{background:var(--good-soft);color:var(--good);}
+  .pill.vencida{background:var(--warn-soft);color:var(--warn);}
+  .pill.compromisso{background:var(--bell-soft);color:var(--bell);}
+
+  /* detail pane */
+  .detail-pane{
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    padding:22px 26px;overflow-y:auto;max-height:calc(100vh - 260px);
+  }
+  .detail-pane .empty-state{padding:80px 0;}
+  .detail-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:6px;}
+  .detail-id{font-size:11.5px;color:var(--faint);font-family:ui-monospace,monospace;margin-bottom:4px;}
+  .detail-title{font-size:16.5px;font-weight:700;line-height:1.35;margin:0;}
+  .sigla-pill{display:inline-block;background:var(--surface-2);color:var(--muted);border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;flex-shrink:0;}
+
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0 22px;}
+  @media (max-width:520px){.field-row{grid-template-columns:1fr;}}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:6px;}
+  select.status-select, input.previsao-input{
+    font-family:inherit;width:100%;font-size:13.5px;font-weight:600;border-radius:6px;padding:8px 12px;
+    border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);
+  }
+  select.status-select{cursor:pointer;appearance:none;-webkit-appearance:none;padding-right:28px;
+    background-repeat:no-repeat;background-position:right 10px center;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="9" height="5" viewBox="0 0 9 5"><path d="M1 1l3.5 3 3.5-3" stroke="%2357645F" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  }
+  input.previsao-input.vencida{border-color:var(--warn);color:var(--warn);background:var(--warn-soft);}
+  select.status-select:focus-visible, input.previsao-input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+
+  hr.sep{border:none;border-top:1px solid var(--line);margin:20px 0;}
+
+  .detail-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:10px;}
+
+  .history{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+  .history-item{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:9px 11px;font-size:12.5px;}
+  .history-item.is-compromisso{border-left:3px solid var(--bell);}
+  .history-item.is-resolved-note{border-left:3px solid var(--good);}
+  .history-meta{color:var(--faint);font-size:10.5px;margin-bottom:3px;font-family:ui-monospace,monospace;}
+  .history-text{color:var(--ink);white-space:pre-wrap;}
+  .history-empty{color:var(--faint);font-size:12.5px;font-style:italic;}
+
+  textarea.obs-input{
+    width:100%;min-height:64px;font-family:inherit;font-size:13px;padding:9px 11px;
+    border:1px solid var(--line-strong);border-radius:6px;background:var(--surface);color:var(--ink);resize:vertical;
+  }
+  textarea.obs-input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .checkbox-row{display:flex;align-items:center;gap:7px;margin:9px 0;font-size:12.5px;color:var(--ink);}
+  .checkbox-row input{width:15px;height:15px;accent-color:var(--bell);cursor:pointer;}
+  .checkbox-row label{cursor:pointer;}
+
+  button.primary{
+    background:var(--accent);color:var(--surface);border:none;border-radius:6px;
+    padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  button.primary:hover{filter:brightness(1.1);}
+  button.primary:disabled{opacity:.5;cursor:not-allowed;}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--paper);padding:9px 18px;border-radius:6px;
+    font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;
+  }
+  .toast.show{opacity:1;}
+
+  .skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--line) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:shimmer 1.4s ease infinite;border-radius:6px;}
+  @media (prefers-reduced-motion: reduce){.skeleton{animation:none;}}
+  @keyframes shimmer{0%{background-position:100% 0;}100%{background-position:0 0;}}
+</style>
+
+<div class="app">
+  <header>
+    <div>
+      <h1>Fila de Demandas</h1>
+      <p class="subtitle">Escolha seu nome, veja todas as suas demandas na lista e clique numa pra atualizar status, previsão e registrar compromissos.</p>
+    </div>
+    <div class="picker">
+      <label for="analista-select">Analista</label>
+      <select id="analista-select"><option value="">Carregando…</option></select>
+    </div>
+  </header>
+
+  <div id="banner-area"></div>
+  <div id="content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// API_BASE vazio = mesma origem (backend serve este arquivo e a API).
+// Se abrir este HTML direto de outro lugar, defina window.API_BASE = "http://host:porta"
+// numa tag <script> separada, ANTES desta, apontando pro backend.
+const API_BASE = window.API_BASE || "";
+
+const ANALISTAS = ["Maurício","Cristiano","Jorge Lucas","Larissa","Jairo","Elton","Fabiano","Christian","Rafael"];
+const STATUS_OPTIONS = ["A fazer","Em análise","Em Desenvolvimento","Em testes","Aguardando sprint","Aguardando Versão","Aguardando Área","Publicado"];
+const DONE_STATUS = "Publicado";
+const POLL_INTERVAL_MS = 30000;
+
+function statusClass(status){
+  if (status === DONE_STATUS) return "st-done";
+  if (["Em análise","A fazer","Em analise/Desenvolvimento"].includes(status)) return "st-analise";
+  if (["Em Desenvolvimento","Em desenvolvimento","Em testes","Em teste"].includes(status)) return "st-dev";
+  return "st-todo";
+}
+
+const state = {
+  apiReady: null,          // null=checking, true/false
+  items: null,             // array ou "error"
+  itemsErrorMsg: null,
+  compromissos: [],        // resultado de /api/compromissos pro analista atual
+  obsByItem: {},            // cache: id_demanda -> array de observações
+  selectedAnalista: null,
+  selectedItemId: null,     // id_demanda selecionado no painel de detalhe
+  saving: {},
+  pollHandle: null,
+};
+
+const bannerArea = document.getElementById("banner-area");
+const content = document.getElementById("content");
+const toastEl = document.getElementById("toast");
+const analistaSelect = document.getElementById("analista-select");
+
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  setTimeout(() => toastEl.classList.remove("show"), 2600);
+}
+function esc(s){
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+function fmtDate(iso){
+  if (!iso) return "—";
+  try { return new Date(iso).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"2-digit", hour:"2-digit", minute:"2-digit" }); }
+  catch { return iso; }
+}
+
+async function api(path, options){
+  const res = await fetch(API_BASE + path, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (!res.ok){
+    let detail = null;
+    try { detail = (await res.json()).detail; } catch {}
+    const err = new Error(detail || `Erro ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+function apiErrorMessage(err, action){
+  if (err && err.status){
+    return `Não consegui ${action} (erro ${err.status}${err.message ? ": " + err.message : ""}).`;
+  }
+  return `Não consegui ${action} — o servidor não respondeu. Verifique se o backend está no ar.`;
+}
+
+function initAnalistaSelect(){
+  analistaSelect.innerHTML = `<option value="">Selecione…</option>` + ANALISTAS.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
+  analistaSelect.addEventListener("change", () => {
+    state.selectedAnalista = analistaSelect.value || null;
+    state.selectedItemId = null;
+    state.obsByItem = {};
+    loadForSelectedAnalista();
+    render();
+  });
+}
+
+function render(){
+  renderBanner();
+  renderContent();
+}
+
+function renderBanner(){
+  if (state.apiReady === false){
+    bannerArea.innerHTML = `<div class="banner warn">Não consegui conectar ao servidor do painel. Verifique se o backend está no ar (ou tente recarregar a página).</div>`;
+    return;
+  }
+  if (state.items === "error"){
+    bannerArea.innerHTML = `<div class="banner warn">${esc(state.itemsErrorMsg || "Não consegui carregar os itens. Tente recarregar a página.")}</div>`;
+    return;
+  }
+  bannerArea.innerHTML = "";
+}
+
+function renderContent(){
+  if (state.apiReady === null || state.items === null){
+    content.innerHTML = `<div class="skeleton" style="height:70px;margin-bottom:16px;"></div><div class="skeleton" style="height:420px;"></div>`;
+    return;
+  }
+  if (state.apiReady === false || state.items === "error"){
+    content.innerHTML = "";
+    return;
+  }
+  if (!state.selectedAnalista){
+    content.innerHTML = `<div class="empty-state">Selecione seu nome acima pra ver suas demandas.</div>`;
+    return;
+  }
+
+  const mine = state.items;
+  if (mine.length === 0){
+    content.innerHTML = `<div class="empty-state">Nenhuma demanda encontrada para ${esc(state.selectedAnalista)}.</div>`;
+    return;
+  }
+
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const emAnaliseStates = ["Em análise", "A fazer", "Em analise/Desenvolvimento"];
+  let vencidos = 0, concluidos = 0;
+  for (const it of mine){
+    if (it.status === DONE_STATUS) concluidos++;
+    if (it.previsao_analise && emAnaliseStates.includes(it.status)){
+      const d = new Date(it.previsao_analise + "T00:00:00");
+      if (d < hoje) vencidos++;
+    }
+  }
+  const emAndamento = mine.length - concluidos;
+
+  const compromissosAbertos = [...state.compromissos].sort((a, b) =>
+    (b.observacao.criado_em || "").localeCompare(a.observacao.criado_em || "")
+  );
+  const compromissoItemIds = new Set(compromissosAbertos.map(c => c.id_demanda));
+
+  let html = "";
+
+  html += `<div class="summary">
+    <div class="summary-cell"><div class="summary-label">Total</div><div class="summary-value">${mine.length}</div></div>
+    <div class="summary-cell"><div class="summary-label">Em andamento</div><div class="summary-value">${emAndamento}</div></div>
+    <div class="summary-cell"><div class="summary-label">Vencidos</div><div class="summary-value" style="${vencidos > 0 ? 'color:var(--warn);' : ''}">${vencidos}</div></div>
+    <div class="summary-cell${compromissosAbertos.length ? ' highlight' : ''}"><div class="summary-label">🔔 Compromissos</div><div class="summary-value">${compromissosAbertos.length}</div></div>
+  </div>`;
+
+  if (compromissosAbertos.length > 0){
+    html += `<div>
+      <div class="section-title">🔔 Compromissos em aberto <span class="count">${compromissosAbertos.length}</span></div>`;
+    for (const c of compromissosAbertos){
+      const obs = c.observacao;
+      html += `<div class="compromisso-row">
+        <span class="compromisso-icon">🔔</span>
+        <div class="compromisso-body">
+          <div class="compromisso-item-ref">Item <span class="mono">#${esc(c.id_demanda)}</span> — ${esc(c.descricao || "")}</div>
+          <div class="compromisso-text">${esc(obs.texto)}</div>
+          <div class="compromisso-meta">${esc(fmtDate(obs.criado_em))}</div>
+        </div>
+        <button class="resolve" data-resolve-obs-id="${esc(obs.id)}" data-resolve-item-id="${esc(c.id_demanda)}" ${state.saving[obs.id] ? "disabled" : ""}>${state.saving[obs.id] ? "Salvando…" : "✓ Concluído"}</button>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (!state.selectedItemId || !mine.some(it => it.id_demanda === state.selectedItemId)){
+    state.selectedItemId = mine[0].id_demanda;
+    loadObservations(mine[0].id_demanda);
+  }
+
+  html += `<div class="split"><div class="list-pane">`;
+  for (const it of mine){
+    const status = it.status || STATUS_OPTIONS[0];
+    const prev = it.previsao_analise || "";
+    const vencida = prev && emAnaliseStates.includes(status) && new Date(prev + "T00:00:00") < hoje;
+    const active = state.selectedItemId === it.id_demanda;
+    const hasCompromisso = compromissoItemIds.has(it.id_demanda);
+    html += `<button class="list-item${active ? " active" : ""}" data-select-item="${esc(it.id_demanda)}">
+      <div class="list-item-top">
+        <span class="list-item-id">#${esc(it.id_demanda)}</span>
+        <span class="sigla-pill">${esc(it.sigla || "—")}</span>
+      </div>
+      <div class="list-item-desc">${esc(it.descricao || "(sem descrição)")}</div>
+      <div class="list-item-meta">
+        <span class="pill ${statusClass(status)}">${esc(status)}</span>
+        ${vencida ? `<span class="pill vencida">vencida ${esc(prev)}</span>` : (prev ? `<span class="pill neutral">prev. ${esc(prev)}</span>` : "")}
+        ${hasCompromisso ? `<span class="pill compromisso">🔔</span>` : ""}
+      </div>
+      ${lastObsPreview(it.id_demanda)}
+    </button>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="detail-pane" id="detail-pane">${renderDetail(mine)}</div></div>`;
+
+  content.innerHTML = html;
+  wireEvents();
+}
+
+function lastObsPreview(itemId){
+  const obsList = state.obsByItem[itemId];
+  if (obsList === undefined) return `<span class="list-item-preview empty">carregando…</span>`;
+  if (obsList === "error" || obsList.length === 0) return `<span class="list-item-preview empty">nenhuma observação</span>`;
+  const last = [...obsList].sort((a,b) => (b.criado_em||"").localeCompare(a.criado_em||""))[0];
+  const prefix = last.is_compromisso ? "🔔 " : (last.resolvido ? "✅ " : "");
+  return `<span class="list-item-preview">${esc(prefix + last.texto)}</span>`;
+}
+
+function renderDetail(mine){
+  const item = mine.find(it => it.id_demanda === state.selectedItemId);
+  if (!item) return `<div class="empty-state">Selecione um item na lista ao lado.</div>`;
+  const status = item.status || STATUS_OPTIONS[0];
+  const prev = item.previsao_analise || "";
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const emAnaliseStates = ["Em análise", "A fazer", "Em analise/Desenvolvimento"];
+  const vencida = prev && emAnaliseStates.includes(status) && new Date(prev + "T00:00:00") < hoje;
+
+  return `
+    <div class="detail-header">
+      <div>
+        <div class="detail-id">Item #${esc(item.id_demanda)}</div>
+        <h2 class="detail-title">${esc(item.descricao || "(sem descrição)")}</h2>
+      </div>
+      <span class="sigla-pill">${esc(item.sigla || "—")}</span>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="detail-status">Status</label>
+        <select class="status-select" id="detail-status" data-item-id="${esc(item.id_demanda)}" data-field="status">
+          ${STATUS_OPTIONS.map(s => `<option value="${esc(s)}"${s === status ? " selected" : ""}>${esc(s)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label for="detail-previsao">Previsão de análise</label>
+        <input type="date" class="previsao-input${vencida ? " vencida" : ""}" id="detail-previsao" value="${esc(prev)}" data-item-id="${esc(item.id_demanda)}" data-field="previsao_analise">
+      </div>
+    </div>
+
+    <hr class="sep">
+
+    <div class="detail-label">Histórico de observações</div>
+    <div class="history" id="history-${esc(item.id_demanda)}">${renderHistory(item.id_demanda)}</div>
+
+    <div class="detail-label">Nova observação</div>
+    <textarea class="obs-input" id="obs-input-${esc(item.id_demanda)}" placeholder="Ex: conversei com a Rosangela, aguardando retorno dela até sexta."></textarea>
+    <div class="checkbox-row">
+      <input type="checkbox" id="obs-compromisso-${esc(item.id_demanda)}">
+      <label for="obs-compromisso-${esc(item.id_demanda)}">🔔 Isso é um compromisso que combinei — me lembrar depois</label>
+    </div>
+    <button class="primary" data-add-obs="${esc(item.id_demanda)}" ${state.saving["obs_"+item.id_demanda] ? "disabled" : ""}>${state.saving["obs_"+item.id_demanda] ? "Enviando…" : "Adicionar"}</button>
+  `;
+}
+
+function renderHistory(itemId){
+  const obsList = state.obsByItem[itemId];
+  if (obsList === undefined) return `<div class="skeleton" style="height:40px;"></div>`;
+  if (obsList === "error") return `<p class="history-empty">Não consegui carregar agora.</p>`;
+  if (obsList.length === 0) return `<p class="history-empty">Nenhuma observação ainda.</p>`;
+  const sorted = [...obsList].sort((a,b) => (b.criado_em||"").localeCompare(a.criado_em||""));
+  return sorted.map(o => {
+    const cls = o.is_compromisso ? (o.resolvido ? "is-resolved-note" : "is-compromisso") : "";
+    const prefix = o.is_compromisso ? (o.resolvido ? "✅ (concluído) " : "🔔 ") : "";
+    return `<div class="history-item ${cls}">
+      <div class="history-meta">${esc(o.autor)} · ${esc(fmtDate(o.criado_em))}</div>
+      <div class="history-text">${esc(prefix + o.texto)}</div>
+    </div>`;
+  }).join("");
+}
+
+function wireEvents(){
+  document.querySelectorAll("[data-select-item]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.selectedItemId = btn.dataset.selectItem;
+      loadObservations(btn.dataset.selectItem);
+      render();
+    });
+  });
+  document.querySelectorAll("select.status-select").forEach(sel => {
+    sel.addEventListener("change", () => onFieldChange(sel.dataset.itemId, "status", sel.value));
+  });
+  document.querySelectorAll("input.previsao-input").forEach(inp => {
+    inp.addEventListener("change", () => onFieldChange(inp.dataset.itemId, "previsao_analise", inp.value));
+  });
+  document.querySelectorAll("[data-add-obs]").forEach(btn => {
+    btn.addEventListener("click", () => onAddObs(btn.dataset.addObs));
+  });
+  document.querySelectorAll("[data-resolve-obs-id]").forEach(btn => {
+    btn.addEventListener("click", () => onResolve(btn.dataset.resolveObsId, btn.dataset.resolveItemId));
+  });
+}
+
+async function onFieldChange(itemId, field, value){
+  state.saving[itemId] = true;
+  try {
+    const body = {};
+    body[field] = value || null;
+    const updated = await api(`/api/itens/${encodeURIComponent(itemId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+    const idx = state.items.findIndex(it => it.id_demanda === itemId);
+    if (idx !== -1) state.items[idx] = updated;
+    showToast("Atualizado.");
+  } catch (err) {
+    showToast(apiErrorMessage(err, "salvar"));
+  } finally {
+    state.saving[itemId] = false;
+    render();
+  }
+}
+
+async function onAddObs(itemId){
+  const textarea = document.getElementById("obs-input-" + itemId);
+  const checkbox = document.getElementById("obs-compromisso-" + itemId);
+  const texto = textarea.value.trim();
+  if (!texto) return;
+  const saveKey = "obs_" + itemId;
+  state.saving[saveKey] = true;
+  render();
+  try {
+    await api(`/api/itens/${encodeURIComponent(itemId)}/observacoes`, {
+      method: "POST",
+      body: JSON.stringify({ texto, autor: state.selectedAnalista, is_compromisso: checkbox.checked }),
+    });
+    showToast(checkbox.checked ? "Compromisso registrado." : "Observação adicionada.");
+    await loadObservations(itemId, true);
+    await loadCompromissos();
+  } catch (err) {
+    showToast(apiErrorMessage(err, "adicionar a observação"));
+  } finally {
+    state.saving[saveKey] = false;
+    render();
+  }
+}
+
+async function onResolve(obsId, itemId){
+  state.saving[obsId] = true;
+  render();
+  try {
+    await api(`/api/observacoes/${encodeURIComponent(obsId)}/resolver`, {
+      method: "POST",
+      body: JSON.stringify({ autor: state.selectedAnalista }),
+    });
+    showToast("Compromisso marcado como concluído.");
+    await loadObservations(itemId, true);
+    await loadCompromissos();
+  } catch (err) {
+    showToast(apiErrorMessage(err, "concluir o compromisso"));
+  } finally {
+    state.saving[obsId] = false;
+    render();
+  }
+}
+
+async function loadObservations(itemId, forceRefresh){
+  if (state.obsByItem[itemId] && !forceRefresh) return;
+  try {
+    state.obsByItem[itemId] = await api(`/api/itens/${encodeURIComponent(itemId)}/observacoes`);
+  } catch (err) {
+    state.obsByItem[itemId] = "error";
+  }
+  render();
+}
+
+async function loadCompromissos(){
+  if (!state.selectedAnalista) { state.compromissos = []; return; }
+  try {
+    state.compromissos = await api(`/api/compromissos?analista=${encodeURIComponent(state.selectedAnalista)}`);
+  } catch {
+    state.compromissos = [];
+  }
+}
+
+async function loadItens(){
+  try {
+    const analista = state.selectedAnalista;
+    const items = analista
+      ? await api(`/api/itens?analista=${encodeURIComponent(analista)}`)
+      : [];
+    state.items = items;
+    state.itemsErrorMsg = null;
+    state.apiReady = true;
+    for (const it of items){
+      if (state.obsByItem[it.id_demanda] === undefined) loadObservations(it.id_demanda);
+    }
+  } catch (err) {
+    state.apiReady = err.status !== undefined; // se respondeu com erro HTTP, a API está no ar
+    state.items = "error";
+    state.itemsErrorMsg = apiErrorMessage(err, "carregar os itens");
+  }
+}
+
+async function loadForSelectedAnalista(){
+  state.items = null;
+  render();
+  await Promise.all([loadItens(), loadCompromissos()]);
+  render();
+}
+
+function startPolling(){
+  if (state.pollHandle) clearInterval(state.pollHandle);
+  state.pollHandle = setInterval(() => {
+    if (state.selectedAnalista) loadForSelectedAnalista();
+  }, POLL_INTERVAL_MS);
+}
+
+async function init(){
+  initAnalistaSelect();
+  state.apiReady = null;
+  render();
+  try {
+    await api("/api/health");
+    state.apiReady = true;
+  } catch {
+    state.apiReady = false;
+  }
+  render();
+  startPolling();
+}
+
+init();
+</script>

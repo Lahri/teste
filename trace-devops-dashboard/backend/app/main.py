@@ -1,7 +1,9 @@
+import os
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from . import config, repo
 from .models import (
@@ -66,3 +68,11 @@ def get_compromissos(analista: str):
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+# Serve o painel (frontend/painel-analistas.html) na mesma origem da API,
+# assim o front pode chamar /api/... sem CORS. Registrado por último: as
+# rotas /api/* acima têm prioridade, o mount só pega o que sobrar.
+_FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+if os.path.isdir(_FRONTEND_DIR):
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIR, html=True), name="frontend")
