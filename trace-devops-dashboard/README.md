@@ -159,6 +159,17 @@ Como a API não está disponível, `extract/extract_trace.py` lê um CSV
 exportado manualmente do Trace (padrão: `data/manual/trace_export.csv`,
 configurável via `TRACE_CSV_PATH`) em vez de chamar a API.
 
+**Tela de upload pra gestora (sem terminal):** `backend/frontend/importar.html`
+(abre em `http://localhost:8000/importar.html` com o backend rodando) —
+arrasta o CSV exportado do Trace, o backend valida e processa
+(`POST /api/importar-trace`, implementado em `backend/app/trace_import.py`,
+reaproveitando a mesma validação de `extract_trace.py`) e mostra o
+resultado: sucesso com a contagem de demandas, ou erro listando
+exatamente quais colunas esperadas não foram encontradas — sem precisar
+que ninguém rode script nenhum. Salva em `data/raw/trace_latest.csv`, o
+mesmo lugar que o CLI usaria, então o resto do pipeline
+(`transform/cross_reference.py`) não muda.
+
 **Mapeamento confirmado com um export real** ("Demandas_20.csv", 376
 linhas). A primeira linha do export é um título ("Demandas"), o cabeçalho
 de verdade fica na segunda — por isso `SKIP_ROWS = 1` no topo do script.
