@@ -12,6 +12,10 @@ data/processed/*
 __pycache__/
 *.pyc
 
+# Banco SQLite local (backend/, modo DB_BACKEND=sqlite) — dados de dev,
+# não é código nem deve ir pro histórico do git.
+backend/data/
+
 # Sistema
 .DS_Store
 Thumbs.db

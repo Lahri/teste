@@ -253,15 +253,33 @@ falando direto com o banco deles.
   publicado e em uso pelos analistas hoje (Airtable), até o backend Oracle
   ser validado e for a hora de migrar de verdade.
 
-**Rodando local:**
+**Rodando local (zero setup, sem Docker/conta/nada — modo padrão):**
+```
+cd backend
+pip install -r requirements.txt
+python _dev_sqlite_server.py
+```
+Abre em `http://localhost:8000/` — já sobe com alguns itens de exemplo
+(SQLite em `backend/data/painel.db`, criado automaticamente, dados
+persistem entre execuções). Pra rodar só a API, sem os itens de exemplo:
+`DB_BACKEND=sqlite uvicorn app.main:app --reload`.
+
+**Rodando contra Oracle (produção, ou um Oracle de teste real):**
 ```
 cd backend
 cp .env.example .env
+# editar .env: DB_BACKEND=oracle + ORACLE_DSN/ORACLE_USER/ORACLE_PASSWORD
 cd ..
-docker compose up --build
+docker compose up --build   # ou aponte direto pra um Oracle já existente
 ```
-A API sobe em `http://localhost:8000` (docs interativas em `/docs`). O
-schema é criado automaticamente na primeira subida do container Oracle.
+A API sobe em `http://localhost:8000` (docs interativas em `/docs`). Com
+Docker, o schema é criado automaticamente na primeira subida do container
+Oracle; apontando pra um Oracle já existente, rodar `backend/schema.sql`
+uma vez, manualmente, conectado no schema certo.
+
+`repo.py` escolhe a implementação certa (`repo_sqlite.py` ou
+`repo_oracle.py`) pela variável `DB_BACKEND` — o resto do backend
+(`main.py`, o painel) não muda entre um modo e outro.
 
 **Endpoints:**
 | Rota | O que faz |
@@ -291,6 +309,11 @@ schema é criado automaticamente na primeira subida do container Oracle.
    comentário que continha o texto literal `</script>`, ambos fechando a
    tag de script mais cedo pro parser do navegador e quebrando a página
    inteira silenciosamente.
+4. O mesmo fluxo do item 3, mas contra o `repo_sqlite.py` **real** (não
+   mock) via `_dev_sqlite_server.py` — servidor real, banco real (arquivo),
+   navegador real, `fetch()` real, ponta a ponta. Confirma que o modo
+   "zero setup" funciona de verdade, hoje, sem depender de Docker, Oracle
+   Cloud ou qualquer cadastro.
 
 **O que não deu pra testar nesta sessão:** contra o Oracle de verdade.
 Tentei subir `docker compose up` — o daemon Docker chegou a rodar, mas o

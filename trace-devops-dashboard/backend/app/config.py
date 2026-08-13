@@ -6,9 +6,16 @@ try:
 except ImportError:
     pass
 
-# Em dev local (docker-compose), aponta pro Oracle do container.
-# Em producao, o NTI so precisa trocar estas tres variaveis de ambiente
-# (ou o .env) pelas credenciais reais -- nenhum codigo muda.
+# "sqlite" (padrao): zero setup, banco em arquivo local, nao precisa de
+# Docker nem de conta em nada -- bom pra desenvolver/testar/demonstrar
+# agora. "oracle": usa o banco de producao do SESC (ou um Oracle real de
+# teste) -- so' trocar DB_BACKEND=oracle + as 3 variaveis ORACLE_* abaixo,
+# nenhum outro codigo muda (ver repo.py).
+DB_BACKEND = os.environ.get("DB_BACKEND", "sqlite")
+
+_BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SQLITE_PATH = os.environ.get("SQLITE_PATH", os.path.join(_BACKEND_DIR, "data", "painel.db"))
+
 ORACLE_DSN = os.environ.get("ORACLE_DSN", "localhost:1521/FREEPDB1")
 ORACLE_USER = os.environ.get("ORACLE_USER", "painel_demandas")
 ORACLE_PASSWORD = os.environ.get("ORACLE_PASSWORD", "dev_local_only")
