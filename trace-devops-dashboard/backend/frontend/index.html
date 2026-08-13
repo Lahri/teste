@@ -91,7 +91,9 @@
     border-radius:8px;padding:11px 14px;margin-bottom:8px;
   }
   .compromisso-icon{font-size:15px;line-height:1.3;}
-  .compromisso-body{flex:1;min-width:0;}
+  .compromisso-body{flex:1;min-width:0;cursor:pointer;border-radius:6px;margin:-4px -6px;padding:4px 6px;}
+  .compromisso-body:hover{background:color-mix(in srgb, var(--bell) 12%, transparent);}
+  .compromisso-body:focus-visible{outline:2px solid var(--bell);outline-offset:1px;}
   .compromisso-item-ref{font-size:11px;color:var(--muted);margin-bottom:2px;}
   .compromisso-item-ref .mono{color:var(--muted);}
   .compromisso-text{font-size:13.5px;color:var(--ink);}
@@ -292,9 +294,19 @@ function apiErrorMessage(err, action){
   return `Não consegui ${action} — o servidor não respondeu. Verifique se o backend está no ar.`;
 }
 
+function hasUnsavedDraft(){
+  if (!state.selectedItemId) return false;
+  const textarea = document.getElementById("obs-input-" + state.selectedItemId);
+  return !!(textarea && textarea.value.trim());
+}
+
 function initAnalistaSelect(){
   analistaSelect.innerHTML = `<option value="">Selecione…</option>` + ANALISTAS.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
   analistaSelect.addEventListener("change", () => {
+    if (hasUnsavedDraft() && !confirm("Você tem uma observação não salva. Trocar de analista agora vai perder esse texto. Continuar mesmo assim?")){
+      analistaSelect.value = state.selectedAnalista || "";
+      return;
+    }
     state.selectedAnalista = analistaSelect.value || null;
     state.selectedItemId = null;
     state.obsByItem = {};
@@ -373,7 +385,7 @@ function renderContent(){
       const obs = c.observacao;
       html += `<div class="compromisso-row">
         <span class="compromisso-icon">🔔</span>
-        <div class="compromisso-body">
+        <div class="compromisso-body" data-goto-item="${esc(c.id_demanda)}" role="button" tabindex="0" title="Ver este item">
           <div class="compromisso-item-ref">Item <span class="mono">#${esc(c.id_demanda)}</span> — ${esc(c.descricao || "")}</div>
           <div class="compromisso-text">${esc(obs.texto)}</div>
           <div class="compromisso-meta">${esc(fmtDate(obs.criado_em))}</div>
@@ -495,6 +507,17 @@ function wireEvents(){
       state.selectedItemId = btn.dataset.selectItem;
       loadObservations(btn.dataset.selectItem);
       render();
+    });
+  });
+  document.querySelectorAll("[data-goto-item]").forEach(el => {
+    const goto = () => {
+      state.selectedItemId = el.dataset.gotoItem;
+      loadObservations(el.dataset.gotoItem);
+      render();
+    };
+    el.addEventListener("click", goto);
+    el.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); goto(); }
     });
   });
   document.querySelectorAll("select.status-select").forEach(sel => {
