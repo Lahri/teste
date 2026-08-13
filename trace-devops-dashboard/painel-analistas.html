@@ -1,0 +1,710 @@
+<title>Fila de Demandas — Comitê SESC</title>
+<style>
+  :root{
+    --paper:#F0F2F1;
+    --surface:#FFFFFF;
+    --surface-2:#E4E8E6;
+    --ink:#182220;
+    --muted:#57645F;
+    --faint:#8B9791;
+    --line:#D4DAD7;
+    --line-strong:#B7C0BB;
+    --accent:#0F6B5C;
+    --accent-soft:#DCEEE9;
+    --good:#1E7A4C;
+    --good-soft:#DFF3E6;
+    --warn:#B5530A;
+    --warn-soft:#FCEADC;
+    --bell:#946200;
+    --bell-soft:#FBEBD2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#12160F; --surface:#191F19; --surface-2:#212822;
+      --ink:#E7ECE7; --muted:#94A399; --faint:#5C6961;
+      --line:#2B332C; --line-strong:#3B453C;
+      --accent:#4FBFA6; --accent-soft:#173029;
+      --good:#4ADE80; --good-soft:#123321;
+      --warn:#FB923C; --warn-soft:#3A2515;
+      --bell:#F0B84F; --bell-soft:#3A2E12;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#12160F; --surface:#191F19; --surface-2:#212822;
+    --ink:#E7ECE7; --muted:#94A399; --faint:#5C6961;
+    --line:#2B332C; --line-strong:#3B453C;
+    --accent:#4FBFA6; --accent-soft:#173029;
+    --good:#4ADE80; --good-soft:#123321;
+    --warn:#FB923C; --warn-soft:#3A2515;
+    --bell:#F0B84F; --bell-soft:#3A2E12;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+    font-size:14px;
+  }
+  .mono{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-variant-numeric:tabular-nums;}
+  .app{max-width:1240px;margin:0 auto;padding:24px 24px 40px;display:flex;flex-direction:column;gap:18px;min-height:100vh;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;}
+  h1{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:0 0 3px;}
+  .subtitle{color:var(--muted);font-size:13px;margin:0;max-width:52ch;}
+
+  .picker{display:flex;align-items:center;gap:8px;}
+  .picker label{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;}
+  select#analista-select{
+    font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);
+    background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;
+    padding:8px 32px 8px 12px;cursor:pointer;
+    appearance:none;-webkit-appearance:none;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="%2357645F" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    background-repeat:no-repeat;background-position:right 12px center;
+  }
+  select#analista-select:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+
+  .banner{border-radius:8px;padding:12px 15px;font-size:13.5px;}
+  .banner.warn{background:var(--warn-soft);color:var(--warn);}
+
+  .empty-state{color:var(--faint);font-size:13.5px;font-style:italic;padding:60px 0;text-align:center;}
+
+  /* summary strip */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .summary-cell{background:var(--surface);padding:12px 16px;}
+  .summary-cell.highlight{background:var(--bell-soft);}
+  .summary-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin-bottom:5px;}
+  .summary-cell.highlight .summary-label{color:var(--bell);}
+  .summary-value{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;}
+  .summary-cell.highlight .summary-value{color:var(--bell);}
+  @media (max-width:680px){.summary{grid-template-columns:repeat(2,1fr);}}
+
+  /* compromissos */
+  .section-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--ink);margin:0 0 10px;}
+  .section-title .count{background:var(--bell);color:var(--surface);border-radius:10px;padding:1px 8px;font-size:11.5px;font-variant-numeric:tabular-nums;}
+  .compromisso-row{
+    display:flex;gap:12px;align-items:flex-start;
+    background:var(--bell-soft);border:1px solid color-mix(in srgb, var(--bell) 35%, transparent);
+    border-radius:8px;padding:11px 14px;margin-bottom:8px;
+  }
+  .compromisso-icon{font-size:15px;line-height:1.3;}
+  .compromisso-body{flex:1;min-width:0;}
+  .compromisso-item-ref{font-size:11px;color:var(--muted);margin-bottom:2px;}
+  .compromisso-item-ref .mono{color:var(--muted);}
+  .compromisso-text{font-size:13.5px;color:var(--ink);}
+  .compromisso-meta{font-size:11px;color:var(--faint);margin-top:3px;}
+  button.resolve{
+    flex-shrink:0;background:var(--surface);border:1px solid var(--line-strong);color:var(--ink);
+    border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
+    white-space:nowrap;
+  }
+  button.resolve:hover{border-color:var(--good);color:var(--good);}
+  button.resolve:disabled{opacity:.5;cursor:not-allowed;}
+
+  /* split view */
+  .split{display:grid;grid-template-columns:340px 1fr;gap:16px;flex:1;min-height:480px;}
+  @media (max-width:860px){.split{grid-template-columns:1fr;}}
+
+  .list-pane{
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    overflow-y:auto;max-height:calc(100vh - 260px);
+  }
+  .list-item{
+    display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);
+    padding:12px 14px;cursor:pointer;font-family:inherit;color:inherit;
+  }
+  .list-item:last-child{border-bottom:none;}
+  .list-item:hover{background:var(--surface-2);}
+  .list-item.active{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent);}
+  .list-item-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px;}
+  .list-item-id{font-size:11px;color:var(--faint);font-family:ui-monospace,monospace;}
+  .list-item-desc{font-size:13px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:6px;}
+  .list-item-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;}
+  .list-item-preview{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+  .list-item-preview.empty{color:var(--faint);font-style:italic;}
+
+  .pill{display:inline-block;border-radius:4px;padding:2px 7px;font-size:10.5px;font-weight:600;}
+  .pill.neutral{background:var(--surface-2);color:var(--muted);}
+  .pill.st-todo{background:var(--surface-2);color:var(--muted);}
+  .pill.st-analise{background:var(--warn-soft);color:var(--warn);}
+  .pill.st-dev{background:var(--accent-soft);color:var(--accent);}
+  .pill.st-done{background:var(--good-soft);color:var(--good);}
+  .pill.vencida{background:var(--warn-soft);color:var(--warn);}
+  .pill.compromisso{background:var(--bell-soft);color:var(--bell);}
+
+  /* detail pane */
+  .detail-pane{
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;
+    padding:22px 26px;overflow-y:auto;max-height:calc(100vh - 260px);
+  }
+  .detail-pane .empty-state{padding:80px 0;}
+  .detail-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:6px;}
+  .detail-id{font-size:11.5px;color:var(--faint);font-family:ui-monospace,monospace;margin-bottom:4px;}
+  .detail-title{font-size:16.5px;font-weight:700;line-height:1.35;margin:0;}
+  .sigla-pill{display:inline-block;background:var(--surface-2);color:var(--muted);border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;flex-shrink:0;}
+
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0 22px;}
+  @media (max-width:520px){.field-row{grid-template-columns:1fr;}}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:6px;}
+  select.status-select, input.previsao-input{
+    font-family:inherit;width:100%;font-size:13.5px;font-weight:600;border-radius:6px;padding:8px 12px;
+    border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);
+  }
+  select.status-select{cursor:pointer;appearance:none;-webkit-appearance:none;padding-right:28px;
+    background-repeat:no-repeat;background-position:right 10px center;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="9" height="5" viewBox="0 0 9 5"><path d="M1 1l3.5 3 3.5-3" stroke="%2357645F" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  }
+  input.previsao-input.vencida{border-color:var(--warn);color:var(--warn);background:var(--warn-soft);}
+  select.status-select:focus-visible, input.previsao-input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+
+  hr.sep{border:none;border-top:1px solid var(--line);margin:20px 0;}
+
+  .detail-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:10px;}
+
+  .history{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+  .history-item{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:9px 11px;font-size:12.5px;}
+  .history-item.is-compromisso{border-left:3px solid var(--bell);}
+  .history-item.is-resolved-note{border-left:3px solid var(--good);}
+  .history-meta{color:var(--faint);font-size:10.5px;margin-bottom:3px;font-family:ui-monospace,monospace;}
+  .history-text{color:var(--ink);white-space:pre-wrap;}
+  .history-empty{color:var(--faint);font-size:12.5px;font-style:italic;}
+
+  textarea.obs-input{
+    width:100%;min-height:64px;font-family:inherit;font-size:13px;padding:9px 11px;
+    border:1px solid var(--line-strong);border-radius:6px;background:var(--surface);color:var(--ink);resize:vertical;
+  }
+  textarea.obs-input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .checkbox-row{display:flex;align-items:center;gap:7px;margin:9px 0;font-size:12.5px;color:var(--ink);}
+  .checkbox-row input{width:15px;height:15px;accent-color:var(--bell);cursor:pointer;}
+  .checkbox-row label{cursor:pointer;}
+
+  button.primary{
+    background:var(--accent);color:var(--surface);border:none;border-radius:6px;
+    padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  button.primary:hover{filter:brightness(1.1);}
+  button.primary:disabled{opacity:.5;cursor:not-allowed;}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--paper);padding:9px 18px;border-radius:6px;
+    font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;
+  }
+  .toast.show{opacity:1;}
+
+  .skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--line) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:shimmer 1.4s ease infinite;border-radius:6px;}
+  @media (prefers-reduced-motion: reduce){.skeleton{animation:none;}}
+  @keyframes shimmer{0%{background-position:100% 0;}100%{background-position:0 0;}}
+</style>
+
+<div class="app">
+  <header>
+    <div>
+      <h1>Fila de Demandas</h1>
+      <p class="subtitle">Escolha seu nome, veja todas as suas demandas na lista e clique numa pra atualizar status, previsão e registrar compromissos.</p>
+    </div>
+    <div class="picker">
+      <label for="analista-select">Analista</label>
+      <select id="analista-select"><option value="">Carregando…</option></select>
+    </div>
+  </header>
+
+  <div id="banner-area"></div>
+  <div id="content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const BASE_ID = "app5DmsthrcOlJluK";
+const ITENS_TABLE = "tbleDToRB756Rx3Ni";
+const OBS_TABLE = "tbljYtErlSxeYGGhH";
+const SERVER = "Airtable";
+
+const FLD = {
+  id: "fld9eOd2CLYiwqC40",
+  analista: "fldLNQs0hhqD6jUZX",
+  sigla: "fldJohZxujcfgyzmY",
+  descricao: "fldPMdiT2gMdkSkOv",
+  status: "fldPjcB6JSg5kqm8D",
+  previsao: "fldf0fCg5D9ecjSur",
+  prioridade: "fldwtdaq0f5eXq18f",
+  ciclo: "fldDK38l1H17EfRBz",
+};
+const OBS_FLD = {
+  texto: "fldoIkwPE0kqy1b1K",
+  idItem: "fldG4F7uAPt5yGyVt",
+  autor: "fldsVAF41YJWaRSGW",
+  data: "fldCnVJo3JBouCyml",
+};
+
+const ANALISTAS = ["Maurício","Cristiano","Jorge Lucas","Larissa","Jairo","Elton","Fabiano","Christian","Rafael"];
+const STATUS_OPTIONS = ["A fazer","Em análise","Em Desenvolvimento","Em testes","Aguardando sprint","Aguardando Versão","Aguardando Área","Publicado"];
+const DONE_STATUS = "Publicado";
+
+// Convenção de texto pra "compromissos" — sem precisar de campo novo no Airtable.
+// Uma observação marcada como compromisso é salva com esse prefixo; ao
+// resolver, cria uma nova observação referenciando o id do registro original.
+const TAG_COMPROMISSO = "🔔 COMPROMISSO:";
+const TAG_RESOLVIDO = "✅ RESOLVIDO";
+
+function statusClass(status){
+  if (status === DONE_STATUS) return "st-done";
+  if (["Em análise","A fazer","Em analise/Desenvolvimento"].includes(status)) return "st-analise";
+  if (["Em Desenvolvimento","Em desenvolvimento","Em testes","Em teste"].includes(status)) return "st-dev";
+  return "st-todo";
+}
+
+const state = {
+  mcpReady: null,
+  items: null,
+  itemsErrorCode: null,
+  obsByItem: {},           // cache: id_texto -> array de observações
+  selectedAnalista: null,
+  selectedItemRecId: null, // record id do Airtable selecionado no painel de detalhe
+  itemsUnsub: null,
+  saving: {},
+};
+
+const bannerArea = document.getElementById("banner-area");
+const content = document.getElementById("content");
+const toastEl = document.getElementById("toast");
+const analistaSelect = document.getElementById("analista-select");
+
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  setTimeout(() => toastEl.classList.remove("show"), 2600);
+}
+function esc(s){
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+function selVal(v){
+  if (v == null) return null;
+  if (typeof v === "object") return v.name;
+  return v;
+}
+function fmtDate(iso){
+  if (!iso) return "—";
+  try { return new Date(iso).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"2-digit", hour:"2-digit", minute:"2-digit" }); }
+  catch { return iso; }
+}
+
+function initAnalistaSelect(){
+  analistaSelect.innerHTML = `<option value="">Selecione…</option>` + ANALISTAS.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
+  analistaSelect.addEventListener("change", () => {
+    state.selectedAnalista = analistaSelect.value || null;
+    state.selectedItemRecId = null;
+    preloadObservationsForSelected();
+    render();
+  });
+}
+
+function render(){
+  renderBanner();
+  renderContent();
+}
+
+function renderBanner(){
+  if (state.mcpReady === false){
+    bannerArea.innerHTML = `<div class="banner warn">Este painel precisa da conexão com o Airtable, que não está disponível nesta visualização. Abra a partir do link publicado no claude.ai.</div>`;
+    return;
+  }
+  if (state.items === "error"){
+    const code = state.itemsErrorCode;
+    let msg = "Não consegui carregar os itens. Tente recarregar a página.";
+    if (code === "needs_reauth") msg = "A conexão com o Airtable expirou. Reconecte em claude.ai → Configurações → Conectores.";
+    else if (code === "server_not_connected" || code === "not_granted" || code === "capability_disabled") msg = "O Airtable não está conectado para este painel. Peça para conectar em claude.ai → Configurações → Conectores.";
+    else if (code === "selection_required") msg = "Há mais de uma conta do Airtable disponível — escolha uma quando o navegador perguntar, depois recarregue.";
+    bannerArea.innerHTML = `<div class="banner warn">${esc(msg)}</div>`;
+    return;
+  }
+  bannerArea.innerHTML = "";
+}
+
+function itemHasOpenCompromisso(itemKey){
+  const obsList = state.obsByItem[itemKey];
+  if (!obsList || obsList === "error") return false;
+  const resolvedRefs = new Set(
+    obsList.filter(o => (o.cellValuesByFieldId[OBS_FLD.texto] || "").startsWith(TAG_RESOLVIDO))
+      .map(o => { const m = /#([^:\s]+)/.exec(o.cellValuesByFieldId[OBS_FLD.texto] || ""); return m ? m[1] : null; })
+      .filter(Boolean)
+  );
+  return obsList.some(o => (o.cellValuesByFieldId[OBS_FLD.texto] || "").startsWith(TAG_COMPROMISSO) && !resolvedRefs.has(o.id));
+}
+
+function lastObsPreview(itemKey){
+  const obsList = state.obsByItem[itemKey];
+  if (obsList === undefined) return `<span class="list-item-preview empty">carregando…</span>`;
+  if (obsList === "error" || obsList.length === 0) return `<span class="list-item-preview empty">nenhuma observação</span>`;
+  const last = [...obsList].sort((a,b) => (b.cellValuesByFieldId[OBS_FLD.data]||"").localeCompare(a.cellValuesByFieldId[OBS_FLD.data]||""))[0];
+  const t = (last.cellValuesByFieldId[OBS_FLD.texto] || "").replace(TAG_COMPROMISSO, "🔔").replace(/^✅ RESOLVIDO[^:]*:/, "✅");
+  return `<span class="list-item-preview">${esc(t)}</span>`;
+}
+
+function renderContent(){
+  if (state.mcpReady === null || state.items === null){
+    content.innerHTML = `<div class="skeleton" style="height:70px;margin-bottom:16px;"></div><div class="skeleton" style="height:420px;"></div>`;
+    return;
+  }
+  if (state.mcpReady === false || state.items === "error"){
+    content.innerHTML = "";
+    return;
+  }
+  if (!state.selectedAnalista){
+    content.innerHTML = `<div class="empty-state">Selecione seu nome acima pra ver suas demandas.</div>`;
+    return;
+  }
+
+  const mine = state.items.filter(it => selVal(it.cellValuesByFieldId[FLD.analista]) === state.selectedAnalista);
+  if (mine.length === 0){
+    content.innerHTML = `<div class="empty-state">Nenhuma demanda encontrada para ${esc(state.selectedAnalista)}.</div>`;
+    return;
+  }
+
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const emAnaliseStates = ["Em análise", "A fazer", "Em analise/Desenvolvimento"];
+  let vencidos = 0, concluidos = 0;
+  for (const it of mine){
+    const f = it.cellValuesByFieldId;
+    const status = selVal(f[FLD.status]);
+    const prev = f[FLD.previsao];
+    if (status === DONE_STATUS) concluidos++;
+    if (prev && emAnaliseStates.includes(status)){
+      const d = new Date(prev + "T00:00:00");
+      if (d < hoje) vencidos++;
+    }
+  }
+  const emAndamento = mine.length - concluidos;
+
+  const compromissosAbertos = [];
+  for (const it of mine){
+    const key = it.cellValuesByFieldId[FLD.id];
+    const obsList = state.obsByItem[key];
+    if (!obsList || obsList === "error") continue;
+    const resolvedRefs = new Set(
+      obsList.filter(o => (o.cellValuesByFieldId[OBS_FLD.texto] || "").startsWith(TAG_RESOLVIDO))
+        .map(o => { const m = /#([^:\s]+)/.exec(o.cellValuesByFieldId[OBS_FLD.texto] || ""); return m ? m[1] : null; })
+        .filter(Boolean)
+    );
+    for (const o of obsList){
+      const texto = o.cellValuesByFieldId[OBS_FLD.texto] || "";
+      if (texto.startsWith(TAG_COMPROMISSO) && !resolvedRefs.has(o.id)){
+        compromissosAbertos.push({ obs: o, item: it });
+      }
+    }
+  }
+  compromissosAbertos.sort((a, b) => (b.obs.cellValuesByFieldId[OBS_FLD.data] || "").localeCompare(a.obs.cellValuesByFieldId[OBS_FLD.data] || ""));
+
+  let html = "";
+
+  html += `<div class="summary">
+    <div class="summary-cell"><div class="summary-label">Total</div><div class="summary-value">${mine.length}</div></div>
+    <div class="summary-cell"><div class="summary-label">Em andamento</div><div class="summary-value">${emAndamento}</div></div>
+    <div class="summary-cell"><div class="summary-label">Vencidos</div><div class="summary-value" style="${vencidos > 0 ? 'color:var(--warn);' : ''}">${vencidos}</div></div>
+    <div class="summary-cell${compromissosAbertos.length ? ' highlight' : ''}"><div class="summary-label">🔔 Compromissos</div><div class="summary-value">${compromissosAbertos.length}</div></div>
+  </div>`;
+
+  if (compromissosAbertos.length > 0){
+    html += `<div>
+      <div class="section-title">🔔 Compromissos em aberto <span class="count">${compromissosAbertos.length}</span></div>`;
+    for (const { obs, item } of compromissosAbertos){
+      const texto = (obs.cellValuesByFieldId[OBS_FLD.texto] || "").replace(TAG_COMPROMISSO, "").trim();
+      const itemId = item.cellValuesByFieldId[FLD.id];
+      const itemDesc = item.cellValuesByFieldId[FLD.descricao] || "";
+      html += `<div class="compromisso-row">
+        <span class="compromisso-icon">🔔</span>
+        <div class="compromisso-body">
+          <div class="compromisso-item-ref">Item <span class="mono">#${esc(itemId)}</span> — ${esc(itemDesc)}</div>
+          <div class="compromisso-text">${esc(texto)}</div>
+          <div class="compromisso-meta">${esc(fmtDate(obs.cellValuesByFieldId[OBS_FLD.data]))}</div>
+        </div>
+        <button class="resolve" data-resolve-obs-id="${esc(obs.id)}" data-resolve-item-key="${esc(itemId)}" data-resolve-item-rec="${esc(item.id)}" ${state.saving[obs.id] ? "disabled" : ""}>${state.saving[obs.id] ? "Salvando…" : "✓ Concluído"}</button>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // se nada selecionado ainda, seleciona o primeiro item automaticamente
+  if (!state.selectedItemRecId || !mine.some(it => it.id === state.selectedItemRecId)){
+    state.selectedItemRecId = mine[0].id;
+    loadObservations(mine[0].cellValuesByFieldId[FLD.id]);
+  }
+
+  html += `<div class="split"><div class="list-pane">`;
+  for (const it of mine){
+    const f = it.cellValuesByFieldId;
+    const itemKey = f[FLD.id];
+    const status = selVal(f[FLD.status]) || STATUS_OPTIONS[0];
+    const prev = f[FLD.previsao] || "";
+    const vencida = prev && emAnaliseStates.includes(status) && new Date(prev + "T00:00:00") < hoje;
+    const active = state.selectedItemRecId === it.id;
+    const hasCompromisso = itemHasOpenCompromisso(itemKey);
+    html += `<button class="list-item${active ? " active" : ""}" data-select-item="${esc(it.id)}" data-item-key="${esc(itemKey)}">
+      <div class="list-item-top">
+        <span class="list-item-id">#${esc(itemKey)}</span>
+        <span class="sigla-pill">${esc(selVal(f[FLD.sigla]) || "—")}</span>
+      </div>
+      <div class="list-item-desc">${esc(f[FLD.descricao] || "(sem descrição)")}</div>
+      <div class="list-item-meta">
+        <span class="pill ${statusClass(status)}">${esc(status)}</span>
+        ${vencida ? `<span class="pill vencida">vencida ${esc(prev)}</span>` : (prev ? `<span class="pill neutral">prev. ${esc(prev)}</span>` : "")}
+        ${hasCompromisso ? `<span class="pill compromisso">🔔</span>` : ""}
+      </div>
+      ${lastObsPreview(itemKey)}
+    </button>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="detail-pane" id="detail-pane">${renderDetail(mine)}</div></div>`;
+
+  content.innerHTML = html;
+  wireEvents();
+}
+
+function renderDetail(mine){
+  const item = mine.find(it => it.id === state.selectedItemRecId);
+  if (!item) return `<div class="empty-state">Selecione um item na lista ao lado.</div>`;
+  const f = item.cellValuesByFieldId;
+  const itemKey = f[FLD.id];
+  const status = selVal(f[FLD.status]) || STATUS_OPTIONS[0];
+  const prev = f[FLD.previsao] || "";
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const emAnaliseStates = ["Em análise", "A fazer", "Em analise/Desenvolvimento"];
+  const vencida = prev && emAnaliseStates.includes(status) && new Date(prev + "T00:00:00") < hoje;
+
+  return `
+    <div class="detail-header">
+      <div>
+        <div class="detail-id">Item #${esc(itemKey)}</div>
+        <h2 class="detail-title">${esc(f[FLD.descricao] || "(sem descrição)")}</h2>
+      </div>
+      <span class="sigla-pill">${esc(selVal(f[FLD.sigla]) || "—")}</span>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="detail-status">Status</label>
+        <select class="status-select" id="detail-status" data-item-record-id="${esc(item.id)}" data-field="status">
+          ${STATUS_OPTIONS.map(s => `<option value="${esc(s)}"${s === status ? " selected" : ""}>${esc(s)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label for="detail-previsao">Previsão de análise</label>
+        <input type="date" class="previsao-input${vencida ? " vencida" : ""}" id="detail-previsao" value="${esc(prev)}" data-item-record-id="${esc(item.id)}" data-field="previsao">
+      </div>
+    </div>
+
+    <hr class="sep">
+
+    <div class="detail-label">Histórico de observações</div>
+    <div class="history" id="history-${esc(item.id)}">${renderHistory(itemKey)}</div>
+
+    <div class="detail-label">Nova observação</div>
+    <textarea class="obs-input" id="obs-input-${esc(item.id)}" placeholder="Ex: conversei com a Rosangela, aguardando retorno dela até sexta."></textarea>
+    <div class="checkbox-row">
+      <input type="checkbox" id="obs-compromisso-${esc(item.id)}">
+      <label for="obs-compromisso-${esc(item.id)}">🔔 Isso é um compromisso que combinei — me lembrar depois</label>
+    </div>
+    <button class="primary" data-add-obs="${esc(item.id)}" data-item-key="${esc(itemKey)}" ${state.saving["obs_"+item.id] ? "disabled" : ""}>${state.saving["obs_"+item.id] ? "Enviando…" : "Adicionar"}</button>
+  `;
+}
+
+function renderHistory(itemKey){
+  const obsList = state.obsByItem[itemKey];
+  if (obsList === undefined) return `<div class="skeleton" style="height:40px;"></div>`;
+  if (obsList === "error") return `<p class="history-empty">Não consegui carregar agora.</p>`;
+  if (obsList.length === 0) return `<p class="history-empty">Nenhuma observação ainda.</p>`;
+  const sorted = [...obsList].sort((a,b) => (b.cellValuesByFieldId[OBS_FLD.data]||"").localeCompare(a.cellValuesByFieldId[OBS_FLD.data]||""));
+  return sorted.map(o => {
+    const f = o.cellValuesByFieldId;
+    const autor = selVal(f[OBS_FLD.autor]) || "—";
+    const texto = f[OBS_FLD.texto] || "";
+    const isCompromisso = texto.startsWith(TAG_COMPROMISSO);
+    const isResolved = texto.startsWith(TAG_RESOLVIDO);
+    const displayText = texto.replace(TAG_COMPROMISSO, "🔔").replace(/^(✅ RESOLVIDO)(\s*#\S+)?:/, "✅ Resolvido:");
+    const cls = isCompromisso ? "is-compromisso" : (isResolved ? "is-resolved-note" : "");
+    return `<div class="history-item ${cls}">
+      <div class="history-meta">${esc(autor)} · ${esc(fmtDate(f[OBS_FLD.data]))}</div>
+      <div class="history-text">${esc(displayText)}</div>
+    </div>`;
+  }).join("");
+}
+
+function wireEvents(){
+  document.querySelectorAll("[data-select-item]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.selectedItemRecId = btn.dataset.selectItem;
+      loadObservations(btn.dataset.itemKey);
+      render();
+    });
+  });
+  document.querySelectorAll("select.status-select").forEach(sel => {
+    sel.addEventListener("change", () => onFieldChange(sel.dataset.itemRecordId, "status", sel.value));
+  });
+  document.querySelectorAll("input.previsao-input").forEach(inp => {
+    inp.addEventListener("change", () => onFieldChange(inp.dataset.itemRecordId, "previsao", inp.value));
+  });
+  document.querySelectorAll("[data-add-obs]").forEach(btn => {
+    btn.addEventListener("click", () => onAddObs(btn.dataset.addObs, btn.dataset.itemKey));
+  });
+  document.querySelectorAll("[data-resolve-obs-id]").forEach(btn => {
+    btn.addEventListener("click", () => onResolve(btn.dataset.resolveObsId, btn.dataset.resolveItemKey));
+  });
+}
+
+async function onFieldChange(itemRecordId, field, value){
+  const item = state.items.find(it => it.id === itemRecordId);
+  if (!item) return;
+  const fieldId = field === "status" ? FLD.status : FLD.previsao;
+  state.saving[itemRecordId] = true;
+  try {
+    await window.claude.mcp.callTool(SERVER, "update_records_for_table", {
+      baseId: BASE_ID,
+      tableId: ITENS_TABLE,
+      records: [{ id: itemRecordId, fields: { [fieldId]: value || null } }],
+    });
+    item.cellValuesByFieldId[fieldId] = value ? (field === "status" ? { name: value } : value) : null;
+    await window.claude.mcp.invalidate(SERVER, "list_records_for_table");
+    showToast("Atualizado.");
+  } catch (err) {
+    showToast(mcpErrorMessage(err, "salvar"));
+  } finally {
+    state.saving[itemRecordId] = false;
+    render();
+  }
+}
+
+async function onAddObs(itemRecordId, itemKey){
+  const item = state.items.find(it => it.id === itemRecordId);
+  const textarea = document.getElementById("obs-input-" + itemRecordId);
+  const checkbox = document.getElementById("obs-compromisso-" + itemRecordId);
+  const rawTexto = textarea.value.trim();
+  if (!item || !rawTexto) return;
+  const texto = checkbox.checked ? `${TAG_COMPROMISSO} ${rawTexto}` : rawTexto;
+  const saveKey = "obs_" + itemRecordId;
+  state.saving[saveKey] = true;
+  render();
+  try {
+    await window.claude.mcp.callTool(SERVER, "create_records_for_table", {
+      baseId: BASE_ID,
+      tableId: OBS_TABLE,
+      records: [{ fields: {
+        [OBS_FLD.texto]: texto,
+        [OBS_FLD.idItem]: itemKey,
+        [OBS_FLD.autor]: state.selectedAnalista,
+        [OBS_FLD.data]: new Date().toISOString(),
+      }}],
+    });
+    showToast(checkbox.checked ? "Compromisso registrado." : "Observação adicionada.");
+    await loadObservations(itemKey, true);
+  } catch (err) {
+    showToast(mcpErrorMessage(err, "adicionar a observação"));
+  } finally {
+    state.saving[saveKey] = false;
+    render();
+  }
+}
+
+async function onResolve(obsId, itemKey){
+  state.saving[obsId] = true;
+  render();
+  try {
+    await window.claude.mcp.callTool(SERVER, "create_records_for_table", {
+      baseId: BASE_ID,
+      tableId: OBS_TABLE,
+      records: [{ fields: {
+        [OBS_FLD.texto]: `${TAG_RESOLVIDO} #${obsId}: concluído`,
+        [OBS_FLD.idItem]: itemKey,
+        [OBS_FLD.autor]: state.selectedAnalista,
+        [OBS_FLD.data]: new Date().toISOString(),
+      }}],
+    });
+    showToast("Compromisso marcado como concluído.");
+    await loadObservations(itemKey, true);
+  } catch (err) {
+    showToast(mcpErrorMessage(err, "concluir o compromisso"));
+  } finally {
+    state.saving[obsId] = false;
+    render();
+  }
+}
+
+function mcpErrorMessage(err, action){
+  const code = err && err.code;
+  if (code === "needs_reauth") return "Conexão com o Airtable expirou — reconecte em claude.ai → Conectores.";
+  if (code === "server_not_connected") return "Airtable não conectado — adicione em claude.ai → Conectores.";
+  if (code === "server_unavailable") return "Airtable indisponível no momento. Tente de novo em instantes.";
+  if (code === "tool_error") return `Não consegui ${action}: ${err.message || "erro no Airtable"}.`;
+  return `Não consegui ${action} agora. Tente de novo.`;
+}
+
+async function loadObservations(itemKey, forceRefresh){
+  if (state.obsByItem[itemKey] && !forceRefresh) return;
+  try {
+    const result = await window.claude.mcp.callTool(SERVER, "list_records_for_table", {
+      baseId: BASE_ID,
+      tableId: OBS_TABLE,
+      fieldIds: [OBS_FLD.texto, OBS_FLD.idItem, OBS_FLD.autor, OBS_FLD.data],
+      filters: { operands: [{ operator: "=", operands: [OBS_FLD.idItem, itemKey] }] },
+      pageSize: 200,
+    }, { cache: false });
+    const payload = result && result.payload;
+    state.obsByItem[itemKey] = (payload && payload.records) || [];
+  } catch (err) {
+    state.obsByItem[itemKey] = "error";
+  }
+  render();
+}
+
+function preloadObservationsForSelected(){
+  if (!state.selectedAnalista || !Array.isArray(state.items)) return;
+  const mine = state.items.filter(it => selVal(it.cellValuesByFieldId[FLD.analista]) === state.selectedAnalista);
+  for (const it of mine){
+    const key = it.cellValuesByFieldId[FLD.id];
+    if (state.obsByItem[key] === undefined) loadObservations(key);
+  }
+}
+
+function subscribeItems(){
+  state.itemsUnsub = window.claude.mcp.watchTool(SERVER, "list_records_for_table", {
+    baseId: BASE_ID,
+    tableId: ITENS_TABLE,
+    fieldIds: Object.values(FLD),
+    pageSize: 200,
+  }, (ev) => {
+    if (ev.type === "data"){
+      const payload = ev.result && ev.result.payload;
+      state.items = (payload && payload.records) || [];
+      state.itemsErrorCode = null;
+      preloadObservationsForSelected();
+    } else {
+      const code = ev.error && ev.error.code;
+      if (state.items === null){
+        state.items = "error";
+        state.itemsErrorCode = code;
+      }
+    }
+    render();
+  }, { refetchInterval: 30000 });
+}
+
+function init(){
+  initAnalistaSelect();
+  if (typeof window.claude === "undefined" || !window.claude.mcp){
+    state.mcpReady = false;
+    render();
+    return;
+  }
+  state.mcpReady = true;
+  render();
+  subscribeItems();
+}
+
+init();
+</script>

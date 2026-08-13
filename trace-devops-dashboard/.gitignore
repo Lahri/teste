@@ -1,0 +1,21 @@
+# Credenciais reais — nunca commitar
+.env
+
+# Dados baixados/gerados pelo pipeline — não são código, e podem ter
+# informação interna (nomes, demandas) que não deve ir pro histórico do git
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+
+# Banco SQLite local (backend/, modo DB_BACKEND=sqlite) — dados de dev,
+# não é código nem deve ir pro histórico do git.
+backend/data/
+
+# Sistema
+.DS_Store
+Thumbs.db

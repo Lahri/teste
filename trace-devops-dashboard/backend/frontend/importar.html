@@ -1,0 +1,222 @@
+<title>Importar demandas do Trace</title>
+<style>
+  :root{
+    --paper:#F0F2F1;
+    --surface:#FFFFFF;
+    --surface-2:#E4E8E6;
+    --ink:#182220;
+    --muted:#57645F;
+    --faint:#8B9791;
+    --line:#D4DAD7;
+    --line-strong:#B7C0BB;
+    --accent:#0F6B5C;
+    --accent-soft:#DCEEE9;
+    --good:#1E7A4C;
+    --good-soft:#DFF3E6;
+    --warn:#B5530A;
+    --warn-soft:#FCEADC;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#12160F; --surface:#191F19; --surface-2:#212822;
+      --ink:#E7ECE7; --muted:#94A399; --faint:#5C6961;
+      --line:#2B332C; --line-strong:#3B453C;
+      --accent:#4FBFA6; --accent-soft:#173029;
+      --good:#4ADE80; --good-soft:#123321;
+      --warn:#FB923C; --warn-soft:#3A2515;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#12160F; --surface:#191F19; --surface-2:#212822;
+    --ink:#E7ECE7; --muted:#94A399; --faint:#5C6961;
+    --line:#2B332C; --line-strong:#3B453C;
+    --accent:#4FBFA6; --accent-soft:#173029;
+    --good:#4ADE80; --good-soft:#123321;
+    --warn:#FB923C; --warn-soft:#3A2515;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+    font-size:14px;
+  }
+  .app{max-width:640px;margin:0 auto;padding:48px 24px 60px;}
+  h1{font-size:20px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em;}
+  .subtitle{color:var(--muted);font-size:13.5px;margin:0 0 28px;max-width:56ch;}
+
+  .dropzone{
+    border:2px dashed var(--line-strong);border-radius:12px;background:var(--surface);
+    padding:40px 24px;text-align:center;cursor:pointer;transition:border-color .15s, background .15s;
+  }
+  .dropzone:hover, .dropzone.dragover{border-color:var(--accent);background:var(--accent-soft);}
+  .dropzone:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .dropzone-icon{font-size:32px;margin-bottom:10px;}
+  .dropzone-text{font-size:14px;font-weight:600;margin-bottom:4px;}
+  .dropzone-hint{font-size:12.5px;color:var(--muted);}
+  input[type="file"]{display:none;}
+
+  .file-chip{
+    display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);
+    border-radius:8px;padding:12px 14px;margin-top:16px;
+  }
+  .file-chip-icon{font-size:18px;}
+  .file-chip-name{flex:1;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .file-chip-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px 8px;border-radius:5px;}
+  .file-chip-remove:hover{background:var(--surface-2);color:var(--ink);}
+
+  button.primary{
+    width:100%;margin-top:16px;background:var(--accent);color:var(--surface);border:none;border-radius:8px;
+    padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  button.primary:hover{filter:brightness(1.08);}
+  button.primary:disabled{opacity:.5;cursor:not-allowed;}
+
+  .result{border-radius:10px;padding:18px 20px;margin-top:20px;font-size:13.5px;}
+  .result.ok{background:var(--good-soft);color:var(--good);}
+  .result.error{background:var(--warn-soft);color:var(--warn);}
+  .result h2{font-size:14.5px;margin:0 0 10px;}
+  .result dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13px;}
+  .result dt{color:inherit;opacity:.75;}
+  .result dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;}
+  .result ul{margin:8px 0 0;padding-left:20px;}
+  .result .path{font-family:ui-monospace,monospace;font-size:11.5px;opacity:.8;margin-top:10px;word-break:break-all;}
+
+  .history{margin-top:36px;}
+  .history-title{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:10px;}
+  .history-empty{color:var(--faint);font-size:13px;font-style:italic;}
+</style>
+
+<div class="app">
+  <h1>Importar demandas do Trace</h1>
+  <p class="subtitle">Exporte o CSV de demandas direto do Trace e solte aqui. O sistema confere se o formato está certo e já atualiza os dados usados no relatório — sem precisar de ninguém rodar nada por terminal.</p>
+
+  <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Selecionar arquivo CSV">
+    <div class="dropzone-icon">📄</div>
+    <div class="dropzone-text">Arraste o arquivo aqui, ou clique pra escolher</div>
+    <div class="dropzone-hint">Só arquivos .csv exportados do Trace</div>
+  </div>
+  <input type="file" id="file-input" accept=".csv">
+
+  <div id="file-chip-area"></div>
+
+  <button class="primary" id="btn-importar" disabled>Importar</button>
+
+  <div id="result-area"></div>
+
+  <div class="history">
+    <div class="history-title">Última importação nesta sessão</div>
+    <div id="history-area"><p class="history-empty">Nenhuma importação feita ainda.</p></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.API_BASE || "";
+
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("file-input");
+const fileChipArea = document.getElementById("file-chip-area");
+const btnImportar = document.getElementById("btn-importar");
+const resultArea = document.getElementById("result-area");
+const historyArea = document.getElementById("history-area");
+
+let selectedFile = null;
+
+function esc(s){
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+
+function setFile(file, opts){
+  selectedFile = file || null;
+  if (!(opts && opts.keepResult)) resultArea.innerHTML = "";
+  if (!selectedFile){
+    fileChipArea.innerHTML = "";
+    btnImportar.disabled = true;
+    return;
+  }
+  fileChipArea.innerHTML = `
+    <div class="file-chip">
+      <span class="file-chip-icon">📄</span>
+      <span class="file-chip-name">${esc(selectedFile.name)}</span>
+      <button class="file-chip-remove" id="btn-remove-file" type="button">Remover</button>
+    </div>`;
+  document.getElementById("btn-remove-file").addEventListener("click", () => setFile(null));
+  btnImportar.disabled = false;
+}
+
+dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); fileInput.click(); }
+});
+fileInput.addEventListener("change", () => setFile(fileInput.files[0]));
+
+["dragenter", "dragover"].forEach(evt => {
+  dropzone.addEventListener(evt, (ev) => { ev.preventDefault(); dropzone.classList.add("dragover"); });
+});
+["dragleave", "drop"].forEach(evt => {
+  dropzone.addEventListener(evt, (ev) => { ev.preventDefault(); dropzone.classList.remove("dragover"); });
+});
+dropzone.addEventListener("drop", (ev) => {
+  const file = ev.dataTransfer.files && ev.dataTransfer.files[0];
+  if (file) setFile(file);
+});
+
+btnImportar.addEventListener("click", async () => {
+  if (!selectedFile) return;
+  btnImportar.disabled = true;
+  btnImportar.textContent = "Importando…";
+  resultArea.innerHTML = "";
+  try {
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    const res = await fetch(API_BASE + "/api/importar-trace", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok){
+      renderError(data.detail);
+    } else {
+      renderSuccess(data);
+    }
+  } catch (err) {
+    renderError("Não consegui falar com o servidor. Verifique se o backend está no ar e tente de novo.");
+  } finally {
+    btnImportar.disabled = false;
+    btnImportar.textContent = "Importar";
+  }
+});
+
+function renderSuccess(data){
+  resultArea.innerHTML = `
+    <div class="result ok">
+      <h2>✅ Importado com sucesso</h2>
+      <dl>
+        <dt>Linhas processadas</dt><dd>${esc(data.linhas)}</dd>
+        <dt>Demandas únicas</dt><dd>${esc(data.demandas_unicas)}</dd>
+        <dt>Com vínculo Azure DevOps</dt><dd>${esc(data.com_vinculo_devops)}</dd>
+      </dl>
+      <div class="path">Salvo em: ${esc(data.salvo_em)}</div>
+    </div>`;
+  historyArea.innerHTML = `<p>${esc(new Date().toLocaleString("pt-BR"))} — ${esc(data.demandas_unicas)} demandas únicas importadas com sucesso.</p>`;
+  setFile(null, { keepResult: true });
+}
+
+function renderError(detail){
+  let html = `<div class="result error"><h2>⚠️ Não consegui importar</h2>`;
+  if (detail && typeof detail === "object" && detail.colunas_faltando){
+    html += `<p>${esc(detail.mensagem)}</p>
+      <p style="margin-bottom:2px;"><strong>Colunas esperadas e não encontradas:</strong></p>
+      <ul>${detail.colunas_faltando.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+      <p style="margin-top:10px;margin-bottom:2px;"><strong>Colunas que o arquivo tem:</strong></p>
+      <ul>${detail.colunas_encontradas.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+      <p style="margin-top:10px;">Confira se exportou o arquivo certo do Trace, ou fale com quem mantém o sistema — o formato do export pode ter mudado.</p>`;
+  } else {
+    html += `<p>${esc(typeof detail === "string" ? detail : "Erro desconhecido.")}</p>`;
+  }
+  html += `</div>`;
+  resultArea.innerHTML = html;
+}
+</script>
