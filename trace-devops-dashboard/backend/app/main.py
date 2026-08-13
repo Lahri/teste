@@ -1,11 +1,11 @@
 import os
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from . import config, repo
+from . import config, repo, trace_import
 from .models import (
     CompromissoAberto,
     Item,
@@ -68,6 +68,22 @@ def get_compromissos(analista: str):
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/api/importar-trace")
+async def importar_trace(file: UploadFile):
+    conteudo = await file.read()
+    try:
+        resumo = trace_import.importar(file.filename or "arquivo.csv", conteudo)
+    except trace_import.CsvInvalidoError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except trace_import.extract_trace.ColunasFaltandoError as e:
+        raise HTTPException(status_code=422, detail={
+            "mensagem": "O arquivo não tem o formato esperado do export do Trace.",
+            "colunas_faltando": e.faltando,
+            "colunas_encontradas": e.encontradas,
+        })
+    return {"ok": True, **resumo}
 
 
 # Serve o painel (frontend/painel-analistas.html) na mesma origem da API,

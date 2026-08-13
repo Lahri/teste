@@ -89,6 +89,19 @@ DIAS_LIMITE_PARADO = 30
 _ID_RE = re.compile(r"\d{4,6}")
 
 
+class ColunasFaltandoError(Exception):
+    """Colunas esperadas não encontradas no CSV -- layout do export mudou.
+    Guarda o detalhe estruturado (não só a mensagem) pra quem chama poder
+    decidir como mostrar (terminal vs. tela web)."""
+
+    def __init__(self, faltando: list[str], encontradas: list[str]):
+        self.faltando = faltando
+        self.encontradas = encontradas
+        super().__init__(
+            "Colunas esperadas não encontradas no CSV: " + ", ".join(faltando)
+        )
+
+
 def _parse_user_story_ids(raw) -> list[str]:
     """'ID User Story:' pode ter mais de um id, separado por vírgula/ponto
     e vírgula, às vezes com texto extra colado (ex: "36197 - PENDENTE...",
@@ -96,6 +109,28 @@ def _parse_user_story_ids(raw) -> list[str]:
     if pd.isna(raw):
         return []
     return _ID_RE.findall(str(raw))
+
+
+def process_trace_dataframe(df: "pd.DataFrame") -> "pd.DataFrame":
+    """Núcleo do processamento: valida colunas, mapeia nomes, calcula
+    parado_30_dias e explode vínculos com Azure DevOps. Usado tanto pelo
+    CLI (main() abaixo) quanto pelo endpoint de upload no backend
+    (backend/app/main.py) -- uma lógica só, dois jeitos de chamar.
+    Levanta ColunasFaltandoError se o layout não bater."""
+    missing = [col for col in TRACE_COLUMN_MAP if col not in df.columns]
+    if missing:
+        raise ColunasFaltandoError(missing, list(df.columns))
+
+    df = df.rename(columns=TRACE_COLUMN_MAP)
+
+    df["dias_no_status_atual"] = pd.to_numeric(df["dias_no_status_atual"], errors="coerce")
+    concluido = df["status"].isin(TRACE_DONE_STATES)
+    df["parado_30_dias"] = (df["dias_no_status_atual"] >= DIAS_LIMITE_PARADO) & ~concluido
+
+    df["azdo_user_story_id"] = df["azdo_user_story_id_raw"].apply(_parse_user_story_ids)
+    df = df.explode("azdo_user_story_id")
+
+    return df[[c for c in REQUIRED_OUTPUT_COLS if c in df.columns]]
 
 
 def main():
@@ -110,29 +145,19 @@ def main():
 
     df = pd.read_csv(INPUT_PATH, skiprows=SKIP_ROWS)
 
-    missing = [col for col in TRACE_COLUMN_MAP if col not in df.columns]
-    if missing:
+    try:
+        df = process_trace_dataframe(df)
+    except ColunasFaltandoError as e:
         print(
             "Erro: as colunas abaixo eram esperadas mas não foram encontradas no CSV.\n"
             "Ajuste o dicionário TRACE_COLUMN_MAP (e/ou SKIP_ROWS) no topo de\n"
             "extract_trace.py com os nomes reais que aparecem no seu export.\n",
             file=sys.stderr,
         )
-        for col in missing:
+        for col in e.faltando:
             print(f"  esperado, não encontrado: {col!r}", file=sys.stderr)
-        print(f"\nColunas que o arquivo realmente tem: {list(df.columns)}", file=sys.stderr)
+        print(f"\nColunas que o arquivo realmente tem: {e.encontradas}", file=sys.stderr)
         sys.exit(1)
-
-    df = df.rename(columns=TRACE_COLUMN_MAP)
-
-    df["dias_no_status_atual"] = pd.to_numeric(df["dias_no_status_atual"], errors="coerce")
-    concluido = df["status"].isin(TRACE_DONE_STATES)
-    df["parado_30_dias"] = (df["dias_no_status_atual"] >= DIAS_LIMITE_PARADO) & ~concluido
-
-    df["azdo_user_story_id"] = df["azdo_user_story_id_raw"].apply(_parse_user_story_ids)
-    df = df.explode("azdo_user_story_id")
-
-    df = df[[c for c in REQUIRED_OUTPUT_COLS if c in df.columns]]
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     out_path = os.path.join(OUTPUT_DIR, "trace_latest.csv")

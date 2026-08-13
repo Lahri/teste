@@ -3,3 +3,5 @@ uvicorn[standard]
 oracledb
 pydantic
 python-dotenv
+python-multipart
+pandas
